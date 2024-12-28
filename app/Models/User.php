@@ -43,6 +43,10 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
+    protected $appends = [
+        'avatar_url',
+    ];
+
     public function conversations()
     {
         return $this->belongsToMany(Conversation::class,'participants')
@@ -63,5 +67,10 @@ class User extends Authenticatable
             ->withPivot([
                 'read_at','deleted_at'
             ]);
+    }
+
+    public function getAvatarUrlAttribute()
+    {
+        return 'https://ui-avatars.com/api/?background=0D8ABC&color=fff&name='. $this->name;
     }
 }

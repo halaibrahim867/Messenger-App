@@ -2,23 +2,22 @@ $('.chat-form').on('submit',function (e){
     e.preventDefault();
     let msg=$(this).find('textarea').val();
     $.post($(this).attr('action'),$(this).serialize(),function (response){
-
+        addMessage(response,'message-out');
     });
-    addMessage(msg,'message-out');
     $(this).find('textarea').val('');
 })
 
 const addMessage=function (msg,c=''){
     $('#chat-body').append(`<div class="message ${c}">
                                 <a href="#" data-bs-toggle="modal" data-bs-target="#modal-profile" class="avatar avatar-responsive">
-                                    <img class="avatar-img" src="" alt="">
+                                    <img class="avatar-img" src="${msg.user.avatar_url}" alt="">
                                 </a>
 
                                 <div class="message-inner">
                                     <div class="message-body">
                                         <div class="message-content">
                                             <div class="message-text">
-                                                <p>${msg}</p>
+                                                <p>${msg.body}</p>
                                             </div>
 
                                             <!-- Dropdown -->
@@ -65,8 +64,62 @@ const addMessage=function (msg,c=''){
                                     </div>
 
                                     <div class="message-footer">
-                                        <span class="extra-small text-muted">just now</span>
+                                        <span class="extra-small text-muted">${moment(msg.created_at).fromNow()}</span>
                                     </div>
                                 </div>
                             </div>`);
 }
+
+const getConversations= function (){
+    $.get('/api/conversations',function (response){
+        for (i in response.data){
+            conversation(response.data[i]);
+        }
+    });
+}
+
+const conversation = function (chat){
+    $('#chat-list').append(`<a href="#${chat.id}" data-messages="${chat.id}" class="card border-0 text-reset">
+                                    <div class="card-body">
+                                        <div class="row gx-5">
+                                            <div class="col-auto">
+                                                    <div class="avatar avatar-online">
+                                                       <img src="${chat.participants[0].avatar_url}">
+                                                    </div>
+                                            </div>
+
+                                            <div class="col">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <h5 class="me-auto mb-0">${chat.participants[0].name}</h5>
+                                                    <span class="text-muted extra-small ms-2">${moment(chat.last_message.created_at).fromNow()}</span>
+                                                </div>
+
+                                                <div class="d-flex align-items-center">
+                                                    <div class="line-clamp me-auto">
+                                                        ${chat.last_message.body}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div><!-- .card-body -->
+                                </a`)
+}
+
+$('#chat-list').on('click','[data-messages]',function (e){
+    e.preventDefault();
+    let id=$(this).attr('data-messages');
+    $('#chat-body').empty();
+    $('input[name=conversation_id]').val(id);
+    $.get(`/api/conversations/${id}/messages`,function (response){
+       $('#chat-name').text(response.conversation.participants[0].name);
+       $('#chat-avatar').attr('src',response.conversation.participants[0].avatar_url)
+       for (i in response.messages.data){
+            let msg=response.messages.data[i];
+            let c = response.data[i].user_id == userId ? 'message-out' : '';
+            addMessage(msg,c);
+        }
+    })
+});
+$(document).ready(function (){
+    getConversations();
+});
